@@ -1,6 +1,8 @@
 export type Action = string
 export type Key = string
 
+export type ActionSign = 'just-down' | 'just-up' | 'up' | 'down'
+
 export class Keyboard {
 
     static bindTo = (canvas: HTMLCanvasElement) => {
@@ -35,6 +37,20 @@ export class Keyboard {
     public is_just_up(action: Action) {
         return this.action_is_just_up.has(action)
     }
+
+    getActionSign(action: Action) {
+        let req: ActionSign = 'up'
+        if (this.is_just_down(action)) {
+            req = 'just-down'
+        } else if (this.is_just_up(action)) {
+            req = 'just-up'
+        } else if (this.is_down(action)) {
+            req = 'down'
+        }
+        return req
+    }
+
+
 
     private on_down = (key: string) => {
         let action = this.keymappings.get(key)
