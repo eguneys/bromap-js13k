@@ -1,0 +1,21 @@
+{
+  "name": "thanks-pawns-js13k",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "zip": "roadroller --optimize 2 dist/assets/index.min.js -o dist/assets/index.min.js && cd dist && 7z a ../dist.zip -mx9 && cd ../bin && advzip.exe --recompress --shrink-extra ../dist.zip",
+    "clean": "rimraf dist && rimraf dist.zip"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "rimraf": "^6.1.3",
+    "roadroller": "^2.1.0",
+    "terser": "^5.49.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1"
+  }
+}
