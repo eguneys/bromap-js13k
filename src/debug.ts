@@ -9,8 +9,8 @@ function log_number(a: number, end = 4) {
 }
 
 export function log_horizontal(body: PositionVelocity, state: string) {
-    return `${state.padEnd(6)}X:${log_number(body.x)}V:${log_sign(body.vhs)}${log_number(body.vh)}A:${log_sign(body.ahs)}${log_number(body.ah)}A<${body.minAccelH}:${body.maxAccelH}>V<${body.minSpeedH}:${body.maxSpeedH}>`
+    return `${state.padEnd(9)}X:${log_number(body.x)}V:${log_sign(body.vhs)}${log_number(body.vh)}A:${log_sign(body.ahs)}${log_number(body.ah)}A<${body.minAccelH}:${body.maxAccelH}>V<${body.minSpeedH}:${body.maxSpeedH}>`
 }
 export function log_vertical(body: PositionVelocity, state: string) {
-    return `${state.padEnd(6)}Y:${log_number(body.y)}V:${log_sign(body.vvs)}${log_number(body.vv)}A:${log_sign(body.avs)}${log_number(body.av)}A<${body.minAccelV}:${body.maxAccelV}>V<${body.minSpeedV}:${body.maxSpeedV}>`
+    return `${state.padEnd(9)}Y:${log_number(body.y)}V:${log_sign(body.vvs)}${log_number(body.vv)}A:${log_sign(body.avs)}${log_number(body.av)}A<${body.minAccelV}:${body.maxAccelV}>V<${body.minSpeedV}:${body.maxSpeedV}>`
 }

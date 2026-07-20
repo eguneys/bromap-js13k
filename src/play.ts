@@ -762,7 +762,7 @@ class RenderDebug {
         for (let text of this.text) {
             cx.font = '20px monospace'
             cx.fillStyle = 'gold'
-            cx.fillText(text, 80, j)
+            cx.fillText(text, 40, j)
         }
 
 
@@ -771,7 +771,7 @@ class RenderDebug {
 
             cx.font = '20px monospace'
             cx.fillStyle = 'darkorange'
-            cx.fillText(text, 80, j)
+            cx.fillText(text, 40, j)
         }
     }
 }

@@ -29,6 +29,9 @@ export class PositionVelocity {
     minAccelH = 0
     maxAccelH = 0
 
+
+    boostAh = 0
+
     private vertical_updates(dt: number) {
         let dtSec = dt * 0.001
 
@@ -57,6 +60,13 @@ export class PositionVelocity {
     update(dt: number) {
         this.horizontal_updates(dt)
         this.vertical_updates(dt)
+
+        this.boostAh = Math.max(0, this.boostAh - dt)
+
+        if (this.boostAh > 0) {
+            let boost = 10
+            this.ah += boost
+        }
     }
 }
 
@@ -82,19 +92,19 @@ export type CollisionManifold = {
 export type CollisionSource = 'u' | 'l' | 'd' | 'r' | 'ul' | 'ur' | 'dl' | 'dr'
 export type ArcadePlayerCollisions = Map<CollisionSource, CollisionManifold>
 
-export type ArcadePlayerState = 'idle' | 'fall' | 'jump-start' | 'jumping' | 'fall-start'
+export type ArcadePlayerState = 'landed' | 'fall' | 'jstart' | 'jump' | 'fstart' | 'jlanded'
 export class ArcadePlayer implements PositionBehavior {
     static create = () => {
         let res = new ArcadePlayer()
 
-        res.body.minAccelH = 200
-        res.body.maxAccelH = 400
-        res.body.minSpeedH = 300
-        res.body.maxSpeedH = 500
+        res.body.minAccelH = 70
+        res.body.maxAccelH = 1000
+        res.body.minSpeedH = 270
+        res.body.maxSpeedH = 530
 
         res.body.minAccelV = 200
-        res.body.maxAccelV = 400
-        res.body.minSpeedV = 300
+        res.body.maxAccelV = 500
+        res.body.minSpeedV = 200
         res.body.maxSpeedV = 500
 
         return res
@@ -104,9 +114,13 @@ export class ArcadePlayer implements PositionBehavior {
     butt!: ArcadePlayerButtonSigns
     coll!: ArcadePlayerCollisions
 
-    state: ArcadePlayerState = 'idle'
+    state: ArcadePlayerState = 'jlanded'
 
     jumpingTimer = 0
+    jumpBuffer = 0
+
+    momentumAh = 0
+    spin = 1
 
     stateUpdates() {
 
@@ -138,40 +152,91 @@ export class ArcadePlayer implements PositionBehavior {
         let coll_down = this.coll.get('d')
 
         switch (this.state) {
-            case 'jumping': {
-                let drag = 10
+            case 'jlanded': {
+                if (this.jumpBuffer > 0) {
+                    this.state = 'jstart'
+                } else {
+                    this.state = 'landed'
+                }
+            } break
+            case 'jump': {
+                let drag = 12
                 this.body.av -= drag
 
+                this.body.ah += drag
+
                 if (this.jumpingTimer === 0) {
-                    this.state = 'fall-start'
+                    this.state = 'fstart'
+                }
+
+                if (req_jump === 'just-up') {
+                    this.state = 'fstart'
                 }
             } break
-            case 'jump-start': {
+            case 'jstart': {
                 this.body.avs = -1
                 this.body.vvs = -1
-                let jumpBoost = 120
+                this.body.av = 900
+                this.body.vv = 900
+                let jumpBoost = 200
                 this.jumpingTimer = jumpBoost
-                this.state = 'jumping'
+                this.state = 'jump'
             } break
             case 'fall': {
-                if (coll_down?.gap === 0) {
-                    this.state = 'idle'
+                let drag = 33
+                this.body.av += drag
+
+                this.body.ah -= drag * 0.2
+
+                if (req_jump === 'just-down') {
+                    this.jumpBuffer = 430
                 }
             } break
-            case 'fall-start': {
+            case 'fstart': {
                 this.body.avs = 1
                 this.body.vvs = 1
+                this.body.av = 0
+                this.body.vv = 0
                 this.state = 'fall'
             } break
-            case 'idle': {
+            case 'landed': {
                 if (req_h !== this.body.vhs) {
                     this.body.vhs = req_h as Sign
                 }
                 if (req_jump === 'just-down') {
-                    this.state = 'jump-start'
+                    this.state = 'jstart'
                     break
                 }
+
+                if (coll_down === undefined) {
+                    this.state = 'fstart'
+                    break
+                }
+
+                let drag = 2.5
+                this.body.vh -= drag
+
+
+                if (this.momentumAh === 0) {
+                    this.momentumAh = 40
+                    this.spin *= -1
+                } else {
+                    this.body.ah += this.spin * (this.momentumAh / 80) * 30
+                }
             } break
+        }
+
+
+        if (req_h === -1) {
+            if (coll_left === undefined) {
+                this.body.vhs = req_h
+                this.body.ahs = 1
+            }
+        } else if (req_h === 1) {
+            if (coll_right === undefined) {
+                this.body.vhs = req_h
+                this.body.ahs = 1
+            }
         }
 
         let gapEpsilon = 8
@@ -198,18 +263,19 @@ export class ArcadePlayer implements PositionBehavior {
         if (coll_down && coll_down.gap < gapEpsilon) {
             if (this.body.vvs === 1) {
                 this.body.vvs = 0
-                console.log(this.body.y, coll_down.gap, this.body.y + coll_down.gap)
                 this.body.y = Math.ceil(this.body.y + coll_down.gap)
+                this.state = 'jlanded'
             }
         }
-        console.log(this.body.y)
-
     }
 
 
     update(dt: number) {
 
         this.jumpingTimer = Math.max(0, this.jumpingTimer - dt)
+        this.jumpBuffer = Math.max(0, this.jumpBuffer - dt)
+
+        this.momentumAh = Math.max(0, this.momentumAh - dt)
 
         this.stateUpdates()
 
@@ -243,6 +309,7 @@ export class ArcadeCameraCruise implements PositionBehavior {
     vertical: ArcadeCameraMovement = 'idle'
 
     update(_dt: number) {
+
 
     }
 }
