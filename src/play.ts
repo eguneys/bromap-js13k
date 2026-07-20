@@ -34,8 +34,8 @@ export function _update(dt: number) {
 export function _render() {
     if (!first_update_called) return
 
-    let sx = vwidth / 640
     let sy = vheight / 360
+    let sx = sy
     cx.setTransform(sx, 0, 0, sy, 0, 0)
 
     managers.render()
@@ -46,12 +46,12 @@ export function _render() {
 }
 
 function draw_tile(n: number, x: number, y: number) {
-    let sx = (n % 16) * 16
-    let sy = Math.floor(n / 16) * 16
-    let sw = 16
-    let sh = 16
-    let scale = 2
-    cx.drawImage(tile_png, sx, sy, sw, sh, x, y, sw * scale, sh * scale)
+    let sx = (n % 8) * 8
+    let sy = Math.floor(n / 8) * 8
+    let sw = 8
+    let sh = 8
+    let scale = 4
+    cx.drawImage(tile_png, sx, sy, sw, sh, Math.floor(x), Math.floor(y), sw * scale, sh * scale)
 }
 
 
