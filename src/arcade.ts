@@ -82,7 +82,7 @@ export type CollisionManifold = {
 export type CollisionSource = 'u' | 'l' | 'd' | 'r' | 'ul' | 'ur' | 'dl' | 'dr'
 export type ArcadePlayerCollisions = Map<CollisionSource, CollisionManifold>
 
-export type ArcadePlayerState = 'idle'
+export type ArcadePlayerState = 'idle' | 'fall' | 'jump-start' | 'jumping' | 'fall-start'
 export class ArcadePlayer implements PositionBehavior {
     static create = () => {
         let res = new ArcadePlayer()
@@ -106,7 +106,9 @@ export class ArcadePlayer implements PositionBehavior {
 
     state: ArcadePlayerState = 'idle'
 
-    update(dt: number) {
+    jumpingTimer = 0
+
+    stateUpdates() {
 
         let { req_left, req_right } = this.butt
 
@@ -128,15 +130,88 @@ export class ArcadePlayer implements PositionBehavior {
             just_stop_h += 1
         }
 
-        //let { req_jump } = this.butt
+        let { req_jump } = this.butt
+
+        let coll_left = this.coll.get('l')
+        let coll_right = this.coll.get('r')
+        let coll_up = this.coll.get('u')
+        let coll_down = this.coll.get('d')
 
         switch (this.state) {
+            case 'jumping': {
+                let drag = 10
+                this.body.av -= drag
+
+                if (this.jumpingTimer === 0) {
+                    this.state = 'fall-start'
+                }
+            } break
+            case 'jump-start': {
+                this.body.avs = -1
+                this.body.vvs = -1
+                let jumpBoost = 120
+                this.jumpingTimer = jumpBoost
+                this.state = 'jumping'
+            } break
+            case 'fall': {
+                if (coll_down?.gap === 0) {
+                    this.state = 'idle'
+                }
+            } break
+            case 'fall-start': {
+                this.body.avs = 1
+                this.body.vvs = 1
+                this.state = 'fall'
+            } break
             case 'idle': {
                 if (req_h !== this.body.vhs) {
                     this.body.vhs = req_h as Sign
                 }
+                if (req_jump === 'just-down') {
+                    this.state = 'jump-start'
+                    break
+                }
             } break
         }
+
+        let gapEpsilon = 8
+
+        if (coll_left && coll_left.gap < gapEpsilon) {
+            if (this.body.vhs === -1) {
+                this.body.vhs = 0
+
+                this.body.x = Math.floor(this.body.x - coll_left.gap)
+            }
+        }
+        if (coll_right && coll_right.gap < gapEpsilon) {
+            if (this.body.vhs === 1) {
+                this.body.vhs = 0
+                this.body.x = Math.ceil(this.body.x + coll_right.gap)
+            }
+        }
+        if (coll_up && coll_up.gap < gapEpsilon) {
+            if (this.body.vvs === -1) {
+                this.body.vvs = 0
+                this.body.y = Math.floor(this.body.y - coll_up.gap)
+            }
+        }
+        if (coll_down && coll_down.gap < gapEpsilon) {
+            if (this.body.vvs === 1) {
+                this.body.vvs = 0
+                console.log(this.body.y, coll_down.gap, this.body.y + coll_down.gap)
+                this.body.y = Math.ceil(this.body.y + coll_down.gap)
+            }
+        }
+        console.log(this.body.y)
+
+    }
+
+
+    update(dt: number) {
+
+        this.jumpingTimer = Math.max(0, this.jumpingTimer - dt)
+
+        this.stateUpdates()
 
         this.body.update(dt)
     }

@@ -1,5 +1,5 @@
-import { ArcadeCameraCruise, ArcadePlayer, large_epsilon } from "./arcade"
-import { box_area, box_intersects, box_intersectsRegion, type Box, type Sign, type Vec2 } from "./collision"
+import { ArcadeCameraCruise, ArcadePlayer, large_epsilon, type ArcadePlayerCollisions } from "./arcade"
+import { box_area, box_intersects, box_intersectsRegion, box_min_distance, type Box, type Sign, type Vec2 } from "./collision"
 import { log_horizontal, log_vertical } from "./debug"
 import { Keyboard } from "./keyboard"
 import { decode2 } from "./map_packer"
@@ -212,8 +212,10 @@ class Player {
         let p = new Player()
         p.arcade.body.x = x
         p.arcade.body.y = y
-        p.body.box.x = x
-        p.body.box.y = y
+        p.body.box.x = p.arcade.body.x - p.body.box.w / 4
+        p.body.box.y = p.arcade.body.y - p.body.box.h / 3
+        p.boxes.center.x = p.arcade.body.x
+        p.boxes.center.y = p.arcade.body.y
         p.body.animation.setActive('idle')
         return p
     }
@@ -225,6 +227,7 @@ class Player {
             req_right: keyboard.getActionSign('go-right'),
             req_jump: keyboard.getActionSign('jump'),
         }
+
         this.arcade.update(dt)
 
         if (this.arcade.body.vhs === 0) {
@@ -252,6 +255,47 @@ class Player {
 class GridCollider {
 
     constructor(public grid_x: number, public grid_y: number, public grid: boolean[][]) { }
+
+
+    getManifold(c: CollisionBoxesManager): ArcadePlayerCollisions {
+        let result = new Map()
+        let center = c.center
+        for (let [name, box] of c.collisions) {
+
+            let gap = this.getGap(box, center)
+            if (gap !== undefined) {
+                result.set(name, { gap })
+            }
+        }
+        return result
+    }
+
+
+    getGap(box: Box, center: Box) {
+        let coll = this.findCollisionIndex(box)
+        if (coll) {
+            let collBox = { x: + this.grid_x + coll[0] * 32, y: + this.grid_y + coll[1] * 32, w: center.w, h: center.h }
+            return box_min_distance(collBox, center)
+        }
+    }
+
+    findCollisionIndex(box: Box) {
+        let on_grid_x = box.x - this.grid_x
+        let on_grid_y = box.y - this.grid_y
+
+        let i_left = Math.floor(on_grid_x / 32)
+        let i_right = Math.ceil((on_grid_x + box.w) / 32)
+
+        let j_up = Math.floor(on_grid_y / 32)
+        let j_down = Math.ceil((on_grid_y + box.h) / 32)
+
+        for (let j = j_up; j < j_down; j++)
+            for (let i = i_left; i < i_right; i++) {
+                if (this.grid[j][i]) {
+                    return [i, j]
+                }
+            }
+    }
 }
 
 class MovableManager {
@@ -279,6 +323,7 @@ class MovableManager {
     }
 
     update(dt: number) {
+        this.player.arcade.coll = this.tile_collider.getManifold(this.player.boxes)
         this.player.update(dt)
     }
 

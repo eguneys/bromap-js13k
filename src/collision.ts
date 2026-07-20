@@ -102,6 +102,24 @@ export function box_area(box: Box) {
     return box.w * box.h
 }
 
+
+export function box_min_distance(a: Box, b: Box): number {
+    // Calculate the distance between the two boxes along the x-axis
+    const dx = Math.max(
+        0,
+        Math.max(a.x, b.x) - Math.min(a.x + a.w, b.x + b.w)
+    );
+
+    // Calculate the distance between the two boxes along the y-axis
+    const dy = Math.max(
+        0,
+        Math.max(a.y, b.y) - Math.min(a.y + a.h, b.y + b.h)
+    );
+
+    // The minimum distance is the Euclidean distance in the 2D plane
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
 export type Vec2 = { x: number, y: number }
 export function distance(a: Vec2, b: Vec2) {
     let dx = a.x - b.x
