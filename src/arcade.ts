@@ -1,4 +1,3 @@
-import { log_horizontal, log_vertical } from "./debug"
 import type { ActionSign } from "./keyboard"
 
 export class PositionVelocity {
@@ -85,7 +84,21 @@ export type ArcadePlayerCollisions = Map<CollisionSource, CollisionManifold>
 
 export type ArcadePlayerState = 'idle'
 export class ArcadePlayer implements PositionBehavior {
-    static create = () => { return new ArcadePlayer() }
+    static create = () => {
+        let res = new ArcadePlayer()
+
+        res.body.minAccelH = 200
+        res.body.maxAccelH = 400
+        res.body.minSpeedH = 300
+        res.body.maxSpeedH = 500
+
+        res.body.minAccelV = 200
+        res.body.maxAccelV = 400
+        res.body.minSpeedV = 300
+        res.body.maxSpeedV = 500
+
+        return res
+    }
     body: PositionVelocity = new PositionVelocity()
 
     butt!: ArcadePlayerButtonSigns
@@ -115,9 +128,12 @@ export class ArcadePlayer implements PositionBehavior {
             just_stop_h += 1
         }
 
+        //let { req_jump } = this.butt
+
         switch (this.state) {
             case 'idle': {
                 if (req_h !== this.body.vhs) {
+                    this.body.vhs = req_h as Sign
                 }
             } break
         }
@@ -151,17 +167,8 @@ export class ArcadeCameraCruise implements PositionBehavior {
     horizontal: ArcadeCameraMovement = 'idle'
     vertical: ArcadeCameraMovement = 'idle'
 
-    text: string[] = []
-
     update(_dt: number) {
 
-        if (import.meta.env.DEV) {
-            let text = log_vertical(this.body, `${this.vertical}`.padEnd(8))
-            text = log_horizontal(this.body, `${this.horizontal}`.padEnd(8))
-            this.text.push(text)
-            if (this.text.length > 3)
-                this.text.shift()
-        }
     }
 }
 

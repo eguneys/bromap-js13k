@@ -1,6 +1,6 @@
 import { ArcadeCameraCruise, ArcadePlayer, large_epsilon } from "./arcade"
 import { box_area, box_intersects, box_intersectsRegion, type Box, type Sign, type Vec2 } from "./collision"
-import { log_horizontal } from "./debug"
+import { log_horizontal, log_vertical } from "./debug"
 import { Keyboard } from "./keyboard"
 import { decode2 } from "./map_packer"
 
@@ -70,7 +70,7 @@ class Animation {
 
     t = 0
     frame = 0
-    public dest: Box = { x: 0, y: 0, w: 1, h: 1 }
+    dest: Box = { x: 0, y: 0, w: 0, h: 0 }
     constructor(readonly source: Box, readonly frames: number[]) { }
 
     update(dt: number) {
@@ -99,7 +99,7 @@ class Animation {
         let dy = this.dest.y
         let w = this.dest.w
         let h = this.dest.h
-        draw_spr(sx, sy, sw, sh, dx, dy, w, h)
+        draw_spr(sx, sy, sw, sh, dx, dy, w / sw, h / sh)
     }
 }
 
@@ -116,26 +116,28 @@ class AnimationManager {
     }
 
     position: Vec2 = { x: 0, y: 0 }
-    scale: Vec2 = { x: 1, y: 1 }
+    w!: number
+    h!: number
     active!: string
     private constructor(readonly frames: Map<string, Animation>) { }
 
     setActive(name: string) {
         this.active = name
-        this.setScale(this.scale.x, this.scale.y)
         this.setPosition(this.position.x, this.position.y)
-    }
-
-    setScale(x: number, y: number) {
-        this.scale = { x, y }
-        this.frames.get(this.active)!.dest.w = this.scale.x
-        this.frames.get(this.active)!.dest.h = this.scale.y
+        this.setWidth(this.w, this.h)
     }
 
     setPosition(x: number, y: number) {
         this.position = { x, y }
         this.frames.get(this.active)!.dest.x = this.position.x
         this.frames.get(this.active)!.dest.y = this.position.y
+    }
+
+    setWidth(w: number, h: number) {
+        this.w = w
+        this.h = h
+        this.frames.get(this.active)!.dest.w = this.w
+        this.frames.get(this.active)!.dest.h = this.h
     }
 
     update(dt: number) {
@@ -151,15 +153,14 @@ class AnimationManager {
 class MovableAnimationWithBoxRelativeToCamera {
 
     frustum!: Box
-    constructor(readonly box: Box, readonly animation: AnimationManager) {
-
-    }
+    constructor(readonly box: Box, readonly animation: AnimationManager) { }
 
     setFrustum(frustum: Box) {
         this.frustum = frustum
         let x = this.box.x - this.frustum.x
-        let y = this.box.y + 16 - this.box.h - 8 - this.frustum.y
+        let y = this.box.y - this.frustum.y
         this.animation.setPosition(x, y)
+        this.animation.setWidth(this.box.w, this.box.h)
     }
 
     update(dt: number) {
@@ -170,10 +171,34 @@ class MovableAnimationWithBoxRelativeToCamera {
         this.animation.render()
     }
 }
+
+
+class CollisionBoxesManager {
+
+    constructor(readonly center: Box) { }
+
+    _map = new Map()
+
+    get collisions() {
+        let { x, y, w, h } = this.center
+        this._map.set('u', { x, y: y - h, w, h })
+        this._map.set('l', { x: x - w, y, w, h })
+        this._map.set('d', { x, y: y + h, w, h })
+        this._map.set('r', { x: x + w, y, w, h })
+        this._map.set('ul', { x: x - w, y: y - h, w, h })
+        this._map.set('ur', { x: x + w, y: y - h, w, h })
+        this._map.set('dl', { x: x - w, y: y + h, w, h })
+        this._map.set('dr', { x: x + w, y: y + h, w, h })
+
+        return this._map
+    }
+}
+
 class Player {
 
+    boxes = new CollisionBoxesManager({ x: 0, y: 0, w: 32, h: 32 })
     body = new MovableAnimationWithBoxRelativeToCamera(
-        { x: 0, y: 0, w: 32, h: 32 },
+        { x: 0, y: 0, w: 64, h: 64 },
         AnimationManager.fromFrames([
             ['walk-left', { x: 0, y: 64, w: 32, h: 32 }, [0, 1, 2, 3, 4]],
             ['walk-right', { x: 0, y: 0, w: 32, h: 32 }, [0, 1, 2, 3, 4]],
@@ -189,12 +214,8 @@ class Player {
         p.arcade.body.y = y
         p.body.box.x = x
         p.body.box.y = y
+        p.body.animation.setActive('idle')
         return p
-    }
-
-    private constructor() {
-        this.body.animation.setActive('idle')
-        this.body.animation.setScale(2, 2)
     }
 
     update(dt: number) {
@@ -214,8 +235,12 @@ class Player {
             this.body.animation.setActive('walk-right')
         }
 
-        this.body.box.x = this.arcade.body.x
-        this.body.box.y = this.arcade.body.y
+        this.boxes.center.x = this.arcade.body.x
+        this.boxes.center.y = this.arcade.body.y
+
+        this.body.box.x = this.arcade.body.x - this.body.box.w / 4
+        this.body.box.y = this.arcade.body.y - this.body.box.h / 3
+
         this.body.update(dt)
     }
 
@@ -223,12 +248,6 @@ class Player {
         this.body.render()
     }
 }
-function render_box(box: Box) {
-    cx.lineWidth = 1
-    cx.strokeStyle = 'white'
-    cx.strokeRect(box.x - managers.Camera.frustum.x, box.y - managers.Camera.frustum.y, box.w, box.h)
-}
-
 
 class GridCollider {
 
@@ -665,6 +684,7 @@ class Managers {
 class RenderDebug {
 
     text: string[] = []
+    text2: string[] = []
 
     update() {
         let player = managers.MovableManager.player
@@ -674,18 +694,45 @@ class RenderDebug {
         if (this.text.length > 3) {
             this.text.shift()
         }
+        let text2 = log_vertical(player.arcade.body, player.arcade.state)
+
+        this.text2.push(text2)
+        if (this.text2.length > 3) {
+            this.text2.shift()
+        }
     }
 
     render_debug() {
         let player = managers.MovableManager.player
-        render_box(player.body.box)
+        render_box(player.body.box, 'rgba(0, 0, 0, 0.1)')
+
+        render_box(player.boxes.center, 'yellow')
+        for (let cc of player.boxes.collisions) {
+            render_box(cc[1], 'rgba(0, 0, 0, 0.2)')
+        }
+
+
 
         let j = 30
         for (let text of this.text) {
+            cx.font = '20px monospace'
+            cx.fillStyle = 'gold'
+            cx.fillText(text, 80, j)
+        }
 
-            cx.font = '20px sans-serif'
-            cx.fillStyle = 'black'
-            cx.fillText(text, 120, j)
+
+        j = 54
+        for (let text of this.text2) {
+
+            cx.font = '20px monospace'
+            cx.fillStyle = 'darkorange'
+            cx.fillText(text, 80, j)
         }
     }
-} 
+}
+
+function render_box(box: Box, color = 'white') {
+    cx.lineWidth = 1
+    cx.strokeStyle = color
+    cx.strokeRect(box.x - managers.Camera.frustum.x, box.y - managers.Camera.frustum.y, box.w, box.h)
+}
