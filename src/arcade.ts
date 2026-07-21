@@ -287,8 +287,12 @@ export class ArcadePlayer implements PositionBehavior {
 
 
 
+type DeadzoneSigns = {
+    horizontal: Sign
+    vertical: Sign
+}
 
-type ArcadeCameraMovement = 'idle' | 'moving' | 'pivot' | 'stick'
+type ArcadeCameraMovement = 'idle' | 'moving' | 'stick'
 export class ArcadeCameraCruise implements PositionBehavior {
 
     static create = () => {
@@ -300,17 +304,64 @@ export class ArcadeCameraCruise implements PositionBehavior {
         res.body.maxAccelH = 300
         res.body.minSpeedH = 200
         res.body.maxSpeedH = 3000
+
+
+        res.body.minAccelV = 200
+        res.body.maxAccelV = 300
+        res.body.minSpeedV = 200
+        res.body.maxSpeedV = 3000
         return res
     }
 
     body!: PositionVelocity
 
-    horizontal: ArcadeCameraMovement = 'idle'
-    vertical: ArcadeCameraMovement = 'idle'
+    state: ArcadeCameraMovement = 'idle'
 
-    update(_dt: number) {
+    deadzone!: DeadzoneSigns
 
+    private stateUpdates() {
 
+        let dead_h = this.deadzone.horizontal
+        let dead_v = this.deadzone.vertical
+        switch (this.state) {
+            case 'idle': {
+                if (dead_h !== this.body.vhs) {
+                    this.body.vhs = dead_h
+                    this.body.ahs = 1
+                    let speed = 7
+                    this.body.ah += speed
+                }
+                if (dead_v !== this.body.vvs) {
+                    this.body.vvs = dead_v
+                    this.body.avs = 1
+                    let speed = 17
+                    this.body.av += speed
+                }
+                if (dead_h === 0) {
+                    this.body.ahs = -1
+                    if (this.body.ah - this.body.minAccelH < epsilon) {
+                        this.body.vhs = 0
+                    }
+                }
+                if (dead_v === 0) {
+                    this.body.avs = -1
+
+                    if (this.body.av - this.body.minAccelV < epsilon) {
+                        this.body.vvs = 0
+                    }
+                }
+
+            } break
+            case 'moving': {
+
+            }
+        }
+    }
+
+    update(dt: number) {
+        this.stateUpdates()
+
+        this.body.update(dt)
     }
 }
 

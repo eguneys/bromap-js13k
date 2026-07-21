@@ -7,20 +7,24 @@ export function box_intersects(a: Box, b: Box) {
 }
 
 export function box_intersectsRegion(a: Box, b: Box) {
-    `
-    -----
-       ----
------
-     --
-     `
-
+    // Calculate the intersection rectangle
     let left = Math.max(a.x, b.x)
     let right = Math.min(a.x + a.w, b.x + b.w)
 
     let top = Math.max(a.y, b.y)
     let bottom = Math.min(a.y + a.h, b.y + b.h)
 
-    return { x: left, y: top, w: right - left, h: bottom - top }
+    // Check if there's an actual intersection
+    if (left >= right || top >= bottom) {
+        return { x: 0, y: 0, w: 0, h: 0 }
+    }
+
+    return {
+        x: left,
+        y: top,
+        w: right - left,
+        h: bottom - top
+    }
 }
 
 

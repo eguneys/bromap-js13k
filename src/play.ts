@@ -419,6 +419,7 @@ export function _set_ctx(ctx: CanvasRenderingContext2D) {
     cx = ctx
 }
 
+//@ts-ignore
 let vwidth = 0
 let vheight = 0
 export function _set_viewport(_top: number, _left: number, width: number, height: number) {
@@ -544,22 +545,23 @@ type CameraZone = { left?: number, up?: number, right?: number, down?: number }
 
 class CameraZones {
 
-    static Deadzone: Box = { x: -110, y: -110, w: 220, h: 220 }
+    static Deadzone: Box = { x: -80, y: -80, w: 160, h: 220 }
 
     arcade = ArcadeCameraCruise.create()
     zone!: CameraZone
 
-    deadzone_req_h: Sign = 0
-    deadzone_req_v: Sign = 0
-
     followDeadzone(target_x: number, target_y: number) {
-        let camera_x = 0
-        let camera_y = 0
+        let camera_x = this.arcade.body.x
+        let camera_y = this.arcade.body.y
         let deadzone = CameraZones.Deadzone
+
+        let deadzone_req_h: Sign = 0
+        let deadzone_req_v: Sign = 0
+
         if (camera_x < target_x + deadzone.x) {
-            this.deadzone_req_h = 1
+            deadzone_req_h = 1
         } else if (camera_x > target_x + deadzone.x + deadzone.w) {
-            this.deadzone_req_h = -1
+            deadzone_req_h = -1
         } else {
             let edge_l = Math.abs(camera_x - (target_x + deadzone.x))
             let edge_r = Math.abs(camera_x - (target_x + deadzone.x + deadzone.w))
@@ -567,15 +569,20 @@ class CameraZones {
             if (edge_l < large_epsilon || edge_r < large_epsilon) {
 
             } else {
-                this.deadzone_req_h = 0
+                deadzone_req_h = 0
             }
         }
         if (camera_y < target_y + deadzone.y) {
-            this.deadzone_req_v = 1
+            deadzone_req_v = 1
         } else if (camera_y > target_y + deadzone.y + deadzone.h) {
-            this.deadzone_req_v = -1
+            deadzone_req_v = -1
         } else {
-            this.deadzone_req_v = 0
+            deadzone_req_v = 0
+        }
+
+        this.arcade.deadzone = {
+            horizontal: deadzone_req_h as Sign,
+            vertical: deadzone_req_v
         }
     }
 
@@ -662,14 +669,14 @@ class Managers {
         this.MovableManager.update(dt)
 
         this.CameraZone.followDeadzone(
-            this.MovableManager.player.body.box.x,
-            this.MovableManager.player.body.box.y)
+            this.MovableManager.player.body.box.x + this.MovableManager.player.body.box.w / 2,
+            this.MovableManager.player.body.box.y + this.MovableManager.player.body.box.h)
 
         this.CameraZone.update(dt)
 
         this.Camera.lerpPanCenter(
-            this.MovableManager.player.body.box.x,
-            this.MovableManager.player.body.box.y)
+            this.CameraZone.arcade.body.x,
+            this.CameraZone.arcade.body.y)
 
         let nextMap = this.activeMap
         let region =
@@ -731,6 +738,9 @@ class RenderDebug {
     text: string[] = []
     text2: string[] = []
 
+    text_cam: string[] = []
+    text_cam_v: string[] = []
+
     update() {
         let player = managers.MovableManager.player
         let text = log_horizontal(player.arcade.body, player.arcade.state)
@@ -745,10 +755,35 @@ class RenderDebug {
         if (this.text2.length > 3) {
             this.text2.shift()
         }
+
+        let camera = managers.CameraZone.arcade
+        let text_cam = log_horizontal(camera.body, camera.state)
+
+        this.text_cam.push(text_cam)
+        if (this.text_cam.length > 3) {
+            this.text_cam.shift()
+        }
+
+        let text_cam_v = log_vertical(camera.body, camera.state)
+
+        this.text_cam_v.push(text_cam_v)
+        if (this.text_cam_v.length > 3) {
+            this.text_cam_v.shift()
+        }
     }
 
     render_debug() {
+
         let player = managers.MovableManager.player
+
+        let deadzoneBox = {
+            x: managers.CameraZone.arcade.body.x + CameraZones.Deadzone.x,
+            y: managers.CameraZone.arcade.body.y + CameraZones.Deadzone.y,
+            w: CameraZones.Deadzone.w,
+            h: CameraZones.Deadzone.h
+        }
+        render_box(deadzoneBox, 'rgba(0, 0, 0, 0.1)')
+
         render_box(player.body.box, 'rgba(0, 0, 0, 0.1)')
 
         render_box(player.boxes.center, 'yellow')
@@ -771,6 +806,24 @@ class RenderDebug {
 
             cx.font = '20px monospace'
             cx.fillStyle = 'darkorange'
+            cx.fillText(text, 40, j)
+        }
+
+
+        j = 84
+        for (let text of this.text_cam) {
+
+            cx.font = '20px monospace'
+            cx.fillStyle = 'black'
+            cx.fillText(text, 40, j)
+        }
+
+
+        j = 104
+        for (let text of this.text_cam_v) {
+
+            cx.font = '20px monospace'
+            cx.fillStyle = 'black'
             cx.fillText(text, 40, j)
         }
     }
