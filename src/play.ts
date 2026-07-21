@@ -541,14 +541,12 @@ class TileMap {
     }
 }
 
-type CameraZone = { left?: number, up?: number, right?: number, down?: number }
 
 class CameraZones {
 
     static Deadzone: Box = { x: -80, y: -80, w: 160, h: 220 }
 
     arcade = ArcadeCameraCruise.create()
-    zone!: CameraZone
 
     followDeadzone(target_x: number, target_y: number) {
         let camera_x = this.arcade.body.x
@@ -584,6 +582,8 @@ class CameraZones {
             horizontal: deadzone_req_h as Sign,
             vertical: deadzone_req_v
         }
+
+
     }
 
     update(dt: number) {
@@ -715,7 +715,7 @@ class Managers {
         const CameraUpTile = '7'
         const CameraDownTile = '8'
 
-        this.CameraZone.zone = {
+        this.CameraZone.arcade.zone = {
             left: tilemap.find(CameraLeftTile)?.x,
             right: tilemap.find(CameraRightTile)?.x,
             up: tilemap.find(CameraUpTile)?.y,

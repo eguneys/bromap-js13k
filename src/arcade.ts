@@ -292,6 +292,8 @@ type DeadzoneSigns = {
     vertical: Sign
 }
 
+type CameraZone = { left?: number, up?: number, right?: number, down?: number }
+
 type ArcadeCameraMovement = 'idle' | 'moving' | 'stick'
 export class ArcadeCameraCruise implements PositionBehavior {
 
@@ -318,6 +320,7 @@ export class ArcadeCameraCruise implements PositionBehavior {
     state: ArcadeCameraMovement = 'idle'
 
     deadzone!: DeadzoneSigns
+    zone!: CameraZone
 
     private stateUpdates() {
 
@@ -351,10 +354,22 @@ export class ArcadeCameraCruise implements PositionBehavior {
                     }
                 }
 
-            } break
-            case 'moving': {
 
-            }
+                if (this.zone.left !== undefined && this.body.x - 640 / 2 - this.zone.left < epsilon) {
+                    if (this.body.vhs === -1) {
+                        this.body.vhs = 0
+                    }
+                }
+                if (this.zone.right) {
+                    console.log(this.zone.right, this.body.x, this.body.x + 640 / 2 - this.zone.right)
+                }
+                if (this.zone.right !== undefined && this.zone.right - this.body.x - 640 / 2 < epsilon) {
+                    if (this.body.vhs === 1) {
+                        this.body.vhs = 0
+                    }
+                }
+
+            } break
         }
     }
 
