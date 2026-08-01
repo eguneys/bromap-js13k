@@ -1,4 +1,4 @@
-import { ArcadeCameraCruise, ArcadePlayer, large_epsilon, type ArcadePlayerCollisions } from "./arcade"
+import { ArcadeCameraCruise, ArcadePlayer, epsilon, large_epsilon, type ArcadePlayerCollisions } from "./arcade"
 import { box_area, box_intersects, box_intersectsRegion, box_min_distance, type Box, type Sign, type Vec2 } from "./collision"
 import { log_horizontal, log_vertical } from "./debug"
 import { Keyboard } from "./keyboard"
@@ -71,7 +71,7 @@ function draw_spr(sx: number, sy: number, sw: number, sh: number, x: number, y: 
 
 class OneShotParticleAnimation {
 
-    fps = 31.2
+    fps = 13.471
 
     t = 0
     frame = 0
@@ -108,8 +108,8 @@ class OneShotParticleAnimationManager {
     particles: OneShotParticleAnimation[] = []
 
     spawn(n: number, x: number, y: number) {
-        if (Math.random() < 0.3) return
-        this.particles.push(new OneShotParticleAnimation(n, x, y))
+        let off = (Math.random() * 300) % 7
+        this.particles.push(new OneShotParticleAnimation(n + off, x, y))
     }
 
     setFrustum(frustum: Box) {
@@ -307,11 +307,17 @@ class Player {
         } else if (this.arcade.body.vhs === -1) {
             this.body.animation.setActive('walk-left')
             if (this.arcade.body.vvs == 0)
-                managers.ParticleManager.spawn(15, this.boxes.center.x, this.boxes.center.y)
+                managers.ParticleManager.spawn(15, this.boxes.center.x + 10, this.boxes.center.y + 10)
         } else {
             this.body.animation.setActive('walk-right')
             if (this.arcade.body.vvs == 0)
-                managers.ParticleManager.spawn(15, this.boxes.center.x, this.boxes.center.y)
+                managers.ParticleManager.spawn(15, this.boxes.center.x - 10, this.boxes.center.y + 10)
+        }
+
+        if (this.arcade.body.vhs !== 0 && this.arcade.body.vvs != 0) {
+            if (Math.abs(this.arcade.body.vh - this.arcade.body.maxSpeedH) < epsilon * 10) {
+                managers.ParticleManager.spawn(20, this.boxes.center.x - 10, this.boxes.center.y)
+            }
         }
 
         this.boxes.center.x = this.arcade.body.x

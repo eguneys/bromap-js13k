@@ -218,7 +218,7 @@ export class ArcadePlayer implements PositionBehavior {
 
 
                 if (this.momentumAh === 0) {
-                    this.momentumAh = 40
+                    this.momentumAh = 100000
                     this.spin *= -1
                 } else {
                     this.body.ah += this.spin * (this.momentumAh / 80) * 30
@@ -361,7 +361,7 @@ export class ArcadeCameraCruise implements PositionBehavior {
                     }
                 }
                 if (this.zone.right) {
-                    console.log(this.zone.right, this.body.x, this.body.x + 640 / 2 - this.zone.right)
+                    //console.log(this.zone.right, this.body.x, this.body.x + 640 / 2 - this.zone.right)
                 }
                 if (this.zone.right !== undefined && this.zone.right - this.body.x - 640 / 2 < epsilon) {
                     if (this.body.vhs === 1) {
