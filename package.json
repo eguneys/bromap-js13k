@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "zip": "roadroller --optimize 2 dist/assets/index.min.js -o dist/assets/index.min.js && cd dist && 7z a ../dist.zip -mx9 && cd ../bin && advzip.exe --recompress --shrink-extra ../dist.zip",
-    "clean": "rimraf dist && rimraf dist.zip"
+    "clean": "rimraf dist && rimraf dist.zip",
+    "ship": "pnpm clean && pnpm build && pnpm zip"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

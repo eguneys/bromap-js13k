@@ -584,10 +584,10 @@ class ParallaxManager {
         }
 
 
-        let aw = asin * 8
+        let aw = Math.abs(asin) * 4
         let pbox = managers.MovableManager.player.boxes.center;
-        let px = pbox.x - 60 - this.frustum.x
-        let py = pbox.y - 60 - this.frustum.y
+        let px = pbox.x - 52 - this.frustum.x
+        let py = pbox.y - 52 - this.frustum.y
 
         cx.save()
         let circleClipPath = new Path2D()
@@ -595,7 +595,7 @@ class ParallaxManager {
 
         cx.clip(circleClipPath)
         cx.globalCompositeOperation = 'color-dodge'
-        draw_bg(0, 120, 40, 40, px - aw, py - aw, 4)
+        draw_bg(0, 50, 30, 30, px - aw, py - aw, 4)
         cx.restore()
     }
 
@@ -732,13 +732,13 @@ class Managers {
 
         res.ParallaxManager.parallax = [
             new RepeatingParallax(
-                { x: 0, y: 0, w: 75, h: 37 },
-                res.Worlds.get('Backyard')!.box, { x: 0, y: 0 }, 10),
+                { x: 0, y: 0, w: 80, h: 36 },
+                res.Worlds.get('Backyard')!.box, { x: 0, y: -20 }, 10),
             new RepeatingParallax(
-                { x: 0, y: 0, w: 75, h: 37 },
+                { x: 35, y: 40, w: 45, h: 40 },
                 res.Worlds.get('Backyard2')!.box, { x: 0, y: 0 }, 10),
             new RepeatingParallax(
-                { x: 0, y: 81, w: 53, h: 37 },
+                { x: 0, y: 27, w: 40, h: 26 },
                 res.Worlds.get('Garage')!.box, { x: 0, y: 0 }, 10),
         ]
 
