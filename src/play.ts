@@ -51,7 +51,11 @@ function draw_tile(n: number, x: number, y: number) {
     let sw = 8
     let sh = 8
     let scale = 4
-    cx.drawImage(tile_png, sx, sy, sw, sh, Math.floor(x), Math.floor(y), sw * scale, sh * scale)
+    let dx = Math.floor(x)
+    let dy = Math.floor(y)
+    let dw = Math.floor(sw * scale) + 1
+    let dh = Math.floor(sh * scale) + 1
+    cx.drawImage(tile_png, sx, sy, sw, sh, dx, dy, dw, dh)
 }
 
 
@@ -63,6 +67,74 @@ function draw_bg(sx: number, sy: number, sw: number, sh: number, x: number, y: n
 function draw_spr(sx: number, sy: number, sw: number, sh: number, x: number, y: number, scale_x: number, scale_y: number) {
     cx.drawImage(spr_png, sx, sy, sw, sh, x, y, sw * scale_x, sh * scale_y)
 }
+
+
+class OneShotParticleAnimation {
+
+    fps = 31.2
+
+    t = 0
+    frame = 0
+    dest: Box = { x: 0, y: 0, w: 0, h: 0 }
+    constructor(readonly n: number, x: number, y: number) {
+        this.dest.w = x
+        this.dest.h = y
+    }
+
+    update(dt: number) {
+        this.t += dt
+
+        let frame_durationMs = 1000 / this.fps
+        let elapsed_frames = this.t / frame_durationMs
+
+        if (elapsed_frames > 1) {
+            let leftover_frames = elapsed_frames % frame_durationMs
+            this.t = leftover_frames
+            this.frame += 1
+        }
+    }
+
+    render() {
+        if (this.frame > 5) return
+        let dx = this.dest.x
+        let dy = this.dest.y
+        let n = this.n + this.frame
+        draw_tile(n, dx, dy)
+    }
+}
+
+class OneShotParticleAnimationManager {
+
+    particles: OneShotParticleAnimation[] = []
+
+    spawn(n: number, x: number, y: number) {
+        if (Math.random() < 0.3) return
+        this.particles.push(new OneShotParticleAnimation(n, x, y))
+    }
+
+    setFrustum(frustum: Box) {
+        for (let p of this.particles) {
+            p.dest.x = p.dest.w - frustum.x
+            p.dest.y = p.dest.h - frustum.y
+        }
+    }
+
+
+    update(dt: number) {
+        for (let p of this.particles) {
+            p.update(dt)
+        }
+        this.particles = this.particles.filter(_ => _.frame < 6)
+    }
+
+    render() {
+        for (let p of this.particles) {
+            p.render()
+        }
+    }
+}
+
+
 
 class Animation {
 
@@ -234,8 +306,12 @@ class Player {
             this.body.animation.setActive('idle')
         } else if (this.arcade.body.vhs === -1) {
             this.body.animation.setActive('walk-left')
+            if (this.arcade.body.vvs == 0)
+                managers.ParticleManager.spawn(15, this.boxes.center.x, this.boxes.center.y)
         } else {
             this.body.animation.setActive('walk-right')
+            if (this.arcade.body.vvs == 0)
+                managers.ParticleManager.spawn(15, this.boxes.center.x, this.boxes.center.y)
         }
 
         this.boxes.center.x = this.arcade.body.x
@@ -648,6 +724,7 @@ class Managers {
 
     MovableManager = new MovableManager()
 
+    ParticleManager = new OneShotParticleAnimationManager()
 
     TileMaps: Map<string, TileMap> = new Map()
     Worlds: Map<string, World> = new Map()
@@ -657,6 +734,7 @@ class Managers {
     activeMap = 'Backyard'
 
     setFrustum(frustum: Box) {
+        this.ParticleManager.setFrustum(frustum)
         this.ParallaxManager.setFrustum(frustum)
         this.MovableManager.player.body.setFrustum(frustum)
 
@@ -666,6 +744,7 @@ class Managers {
     }
 
     update(dt: number) {
+        this.ParticleManager.update(dt)
         this.MovableManager.update(dt)
 
         this.CameraZone.followDeadzone(
@@ -730,6 +809,7 @@ class Managers {
         for (let map of this.TileMaps.values()) {
             map.render()
         }
+        this.ParticleManager.render()
     }
 }
 
