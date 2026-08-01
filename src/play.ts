@@ -17,8 +17,13 @@ export function _init() {
 
 }
 
+let t = 0
+let asin = 0
 let first_update_called = false
 export function _update(dt: number) {
+    t += dt;
+
+    asin = Math.sin(t * 0.001)
 
     first_update_called = true
 
@@ -316,7 +321,7 @@ class Player {
 
         if (this.arcade.body.vhs !== 0 && this.arcade.body.vvs != 0) {
             if (Math.abs(this.arcade.body.vh - this.arcade.body.maxSpeedH) < epsilon * 10) {
-                managers.ParticleManager.spawn(20, this.boxes.center.x - 10, this.boxes.center.y)
+                managers.ParticleManager.spawn(20, this.boxes.center.x - 20 * this.arcade.body.vhs, this.boxes.center.y)
             }
         }
 
@@ -564,8 +569,10 @@ class RepeatingParallax {
 class ParallaxManager {
 
     parallax: RepeatingParallax[] = []
+    frustum!: Box
 
     setFrustum(frustum: Box) {
+        this.frustum = frustum
         for (let px of this.parallax) {
             px.setFrustum(frustum)
         }
@@ -575,10 +582,24 @@ class ParallaxManager {
         for (let px of this.parallax) {
             px.render()
         }
+
+
+        let aw = asin * 8
+        let pbox = managers.MovableManager.player.boxes.center;
+        let px = pbox.x - 60 - this.frustum.x
+        let py = pbox.y - 60 - this.frustum.y
+
+        cx.save()
+        let circleClipPath = new Path2D()
+        circleClipPath.arc(px + 70, py + 70, 60, 0, Math.PI * 2)
+
+        cx.clip(circleClipPath)
+        cx.globalCompositeOperation = 'color-dodge'
+        draw_bg(0, 120, 40, 40, px - aw, py - aw, 4)
+        cx.restore()
     }
 
 }
-
 
 class TileMap {
 
@@ -626,7 +647,7 @@ class TileMap {
 
 class CameraZones {
 
-    static Deadzone: Box = { x: -80, y: -80, w: 160, h: 220 }
+    static Deadzone: Box = { x: -60, y: -80, w: 120, h: 220 }
 
     arcade = ArcadeCameraCruise.create()
 
