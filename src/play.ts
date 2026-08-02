@@ -1,9 +1,12 @@
 import { ArcadeCameraCruise, ArcadePlayer, epsilon, large_epsilon, type ArcadePlayerCollisions } from "./arcade"
+import { AudioPlayer } from "./audioplayer"
 import { box_area, box_intersects, box_intersectsRegion, box_min_distance, type Box, type Sign, type Vec2 } from "./collision"
 import { log_horizontal, log_vertical } from "./debug"
 import { Keyboard } from "./keyboard"
 import { decode2 } from "./map_packer"
+import { song_hello } from "./songs"
 
+let audio: AudioPlayerManager
 let managers: Managers
 
 let render_debug: RenderDebug
@@ -15,11 +18,14 @@ export function _init() {
         render_debug = new RenderDebug()
     }
 
+
 }
 
 let t = 0
 let asin = 0
 let first_update_called = false
+let first_key_pressed = false
+let first_audio_initialized = false
 export function _update(dt: number) {
     t += dt;
 
@@ -33,6 +39,15 @@ export function _update(dt: number) {
 
     if (import.meta.env.DEV) {
         render_debug.update()
+    }
+
+    if (keyboard.is_down('jump')) {
+        first_key_pressed = true
+    }
+
+    if (first_key_pressed && !first_audio_initialized) {
+        first_audio_initialized = true
+        audio.playAudio('main', true)
     }
 }
 
@@ -484,6 +499,9 @@ let tile_png!: HTMLImageElement
 let bg_png!: HTMLImageElement
 let spr_png!: HTMLImageElement
 export async function _load() {
+
+
+    audio = await AudioPlayerManager.loadAudio()
 
     tile_png = new Image()
     tile_png.src = './tiles.png'
@@ -940,4 +958,21 @@ function render_box(box: Box, color = 'white') {
     cx.lineWidth = 1
     cx.strokeStyle = color
     cx.strokeRect(box.x - managers.Camera.frustum.x, box.y - managers.Camera.frustum.y, box.w, box.h)
+}
+
+
+class AudioPlayerManager {
+    static loadAudio = async () => {
+        let res = new AudioPlayerManager()
+
+        res.audio.set('main', await AudioPlayer.init(song_hello))
+
+        return res
+    }
+
+    audio: Map<string, AudioPlayer> = new Map()
+
+    playAudio(name: string, loop: boolean = false) {
+        this.audio.get(name)!.play(loop)
+    }
 }
